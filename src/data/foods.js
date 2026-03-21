@@ -190,53 +190,387 @@ export function calculateCalories(food, grams) {
   return Math.round((food.calories * grams) / 100)
 }
 
-// 联网搜索食物 (使用 OpenFoodFacts API)
+// 中文 → 英文翻译映射表
+const chineseToEnglish = {
+  '麻薯': 'mochi',
+  '奶茶': 'milk tea',
+  '粽子': 'zongzi rice dumpling',
+  '汤圆': 'tangyuan glutinous rice ball',
+  '油条': 'fried dough stick',
+  '烧饼': 'shaobing chinese flatbread',
+  '馒头': 'steamed bun mantou',
+  '饺子': 'dumplings jiaozi',
+  '水饺': 'boiled dumplings',
+  '包子': 'baozi bun',
+  '粥': 'congee rice porridge',
+  '豆腐': 'tofu',
+  '豆浆': 'soy milk',
+  '毛豆': 'edamame',
+  '红豆': 'red bean',
+  '绿豆': 'mung bean',
+  '黑豆': 'black bean',
+  '面条': 'noodles',
+  '方便面': 'instant noodles ramen',
+  '挂面': 'dried noodles',
+  '米粉': 'rice noodles',
+  '凉皮': 'liangpi cold noodles',
+  '凉面': 'cold noodles',
+  '炒饭': 'fried rice',
+  '炒面': 'fried noodles',
+  '煎饼': 'jianbing crepe',
+  '煎饼果子': 'jianbing guozi',
+  '肉夹馍': 'rougamo chinese hamburger',
+  '羊肉串': 'lamb kebab',
+  '烤串': 'kebab',
+  '火锅': 'hotpot hot pot',
+  '串串': 'chuanchuan skewers',
+  '烧烤': 'bbq grilled',
+  '烤肉': 'grilled meat',
+  '炸鸡': 'fried chicken',
+  '鸡翅': 'chicken wing',
+  '鸡腿': 'chicken leg thigh',
+  '鸡胸': 'chicken breast',
+  '鸭肉': 'duck meat',
+  '鸭脖': 'duck neck',
+  '鸭血': 'duck blood',
+  '猪蹄': 'pork trotter',
+  '猪排': 'pork chop',
+  '五花肉': 'pork belly',
+  '牛腩': 'beef brisket',
+  '牛排': 'steak beef steak',
+  '牛腱': 'beef tendon shank',
+  '三文鱼': 'salmon',
+  '金枪鱼': 'tuna',
+  '鳕鱼': 'cod fish',
+  '虾': 'shrimp',
+  '螃蟹': 'crab',
+  '龙虾': 'lobster',
+  '扇贝': 'scallop',
+  '蛤蜊': 'clam',
+  '生蚝': 'oyster',
+  '海胆': 'sea urchin',
+  '海参': 'sea cucumber',
+  '鱿鱼': 'squid',
+  '章鱼': 'octopus',
+  '芒果': 'mango',
+  '火龙果': 'dragon fruit',
+  '猕猴桃': 'kiwi',
+  '石榴': 'pomegranate',
+  '柚子': 'pomelo grapefruit',
+  '菠萝': 'pineapple',
+  '草莓': 'strawberry',
+  '蓝莓': 'blueberry',
+  '西瓜': 'watermelon',
+  '哈密瓜': 'cantaloupe',
+  '葡萄': 'grape',
+  '苹果': 'apple',
+  '梨': 'pear',
+  '桃子': 'peach',
+  '杏子': 'apricot',
+  '樱桃': 'cherry',
+  '荔枝': 'lychee',
+  '龙眼': 'longan',
+  '枇杷': 'loquat',
+  '椰子': 'coconut',
+  '牛油果': 'avocado',
+  '柠檬': 'lemon',
+  '橘子': 'tangerine orange',
+  '橙子': 'orange',
+  '香蕉': 'banana',
+  '罗汉果': 'monk fruit luohanguo',
+  '山楂': 'hawthorn',
+  '柿子': 'persimmon',
+  '红薯': 'sweet potato',
+  '土豆': 'potato',
+  '紫薯': 'purple sweet potato',
+  '玉米': 'corn',
+  '南瓜': 'pumpkin',
+  '冬瓜': 'winter melon',
+  '西瓜皮': 'watermelon rind',
+  '苦瓜': 'bitter melon',
+  '黄瓜': 'cucumber',
+  '番茄': 'tomato',
+  '茄子': 'eggplant',
+  '青椒': 'green pepper bell pepper',
+  '红椒': 'red pepper',
+  '辣椒': 'chili pepper',
+  '土豆片': 'potato chips',
+  '薯片': 'potato chips crisps',
+  '薯条': 'french fries',
+  '爆米花': 'popcorn',
+  '饼干': 'biscuit cookie',
+  '蛋糕': 'cake',
+  '面包': 'bread',
+  '吐司': 'toast',
+  '披萨': 'pizza',
+  '汉堡': 'hamburger burger',
+  '热狗': 'hot dog',
+  '三明治': 'sandwich',
+  '沙拉': 'salad',
+  '果冻': 'jelly',
+  '布丁': 'pudding',
+  '冰淇淋': 'ice cream',
+  '雪糕': 'ice cream popsicle',
+  '酸奶': 'yogurt',
+  '奶酪': 'cheese',
+  '芝士': 'cheese',
+  '黄油': 'butter',
+  '奶油': 'cream',
+  '牛奶': 'milk',
+  '可乐': 'cola coke',
+  '雪碧': 'sprite soda',
+  '芬达': 'fanta',
+  '啤酒': 'beer',
+  '白酒': 'baijiu chinese liquor',
+  '红酒': 'red wine',
+  '葡萄酒': 'wine',
+  '咖啡': 'coffee',
+  '拿铁': 'latte',
+  '卡布奇诺': 'cappuccino',
+  '摩卡': 'mocha',
+  '星巴克': 'starbucks',
+  '珍珠奶茶': 'bubble tea milk tea',
+  '珍珠': 'pearl tapioca',
+  '椰奶': 'coconut milk',
+  '椰汁': 'coconut water juice',
+  '蜂蜜': 'honey',
+  '红糖': 'brown sugar',
+  '冰糖': 'rock sugar',
+  '巧克力': 'chocolate',
+  '黑巧克力': 'dark chocolate',
+  '白巧克力': 'white chocolate',
+  '坚果': 'nuts',
+  '杏仁': 'almond',
+  '核桃': 'walnut',
+  '花生': 'peanut',
+  '瓜子': 'sunflower seeds',
+  '松子': 'pine nut',
+  '开心果': 'pistachio',
+  '腰果': 'cashew',
+  '榛子': 'hazelnut',
+  '夏威夷果': 'macadamia',
+  '碧根果': 'pecan',
+  '海苔': 'seaweed nori',
+  '薯条': 'fries',
+  '炸薯条': 'french fries',
+  '炸鱼': 'fish and chips',
+  '天妇罗': 'tempura',
+  '寿司': 'sushi',
+  '刺身': 'sashimi',
+  '味噌汤': 'miso soup',
+  '拉面': 'ramen',
+  '乌冬面': 'udon',
+  '荞麦面': 'soba',
+  '咖喱': 'curry',
+  '咖喱饭': 'curry rice',
+  '盖浇饭': 'rice bowl',
+  '蛋炒饭': 'egg fried rice',
+  '蛋花汤': 'egg drop soup',
+  '酸辣汤': 'hot and sour soup',
+  '紫菜汤': 'seaweed soup',
+  '玉米汤': 'corn soup',
+  '罗宋汤': 'borscht',
+  '奶油蘑菇汤': 'creamy mushroom soup',
+  '南瓜汤': 'pumpkin soup',
+  '胡辣汤': 'hulatang spicy soup',
+  '臭豆腐': 'stinky tofu',
+  '毛豆腐': 'hairy tofu',
+  '腐竹': 'tofu skin',
+  '豆皮': 'tofu skin yuba',
+  '豆芽': 'bean sprouts',
+  '绿豆芽': 'mung bean sprouts',
+  '黄豆芽': 'soybean sprouts',
+  '海带': 'kelp seaweed',
+  '紫菜': 'nori seaweed',
+  '裙带菜': 'wakame',
+  '泡菜': 'kimchi pickled',
+  '榨菜': 'sichuan pickle',
+  '酸菜': 'sauerkraut pickled mustard',
+  '梅菜': 'pickled mustard green',
+  '卤味': 'braised meat',
+  '叉烧': 'char siu bbq pork',
+  '烧鸭': 'roast duck',
+  '烧鹅': 'roast goose',
+  '白切鸡': 'poached chicken',
+  '盐焗鸡': 'salt baked chicken',
+  '叫花鸡': 'beggar chicken',
+  '辣子鸡': 'spicy diced chicken',
+  '宫保鸡丁': 'kung pao chicken',
+  '鱼香肉丝': 'fish flavored shredded pork',
+  '糖醋里脊': 'sweet and sour pork',
+  '红烧肉': 'red braised pork',
+  '东坡肉': 'dongpo pork',
+  '回锅肉': 'twice cooked pork',
+  '京酱肉丝': 'savory pork with sauce',
+  '木须肉': 'moo shu pork',
+  '青椒肉丝': 'pork with green pepper',
+  '里脊肉': 'tenderloin pork',
+  '狮子头': 'lion head meatball',
+  '肉丸': 'meatball',
+  '鱼丸': 'fish ball',
+  '虾丸': 'shrimp ball',
+  '蟹棒': 'crab stick surimi',
+  '虾滑': 'shrimp paste',
+  '鱼豆腐': 'fish tofu surimi',
+  '牛百叶': 'beef tripe',
+  '牛肚': 'beef stomach',
+  '羊蝎子': 'lamb spine',
+  '羊排': 'lamb chop',
+  '羊腿': 'lamb leg',
+  '肉骨茶': 'bak kut teh',
+  '佛跳墙': 'buddha jumps over the wall soup',
+  '过桥米线': 'crossing bridge rice noodles',
+  '桂林米粉': 'guilin rice noodles',
+  '柳州螺蛳粉': 'liuzhou luosifen',
+  '云南米线': 'yunnan rice noodles',
+  '热干面': 'hot dry noodles',
+  '重庆小面': 'chongqing noodles',
+  '担担面': 'dandan noodles',
+  '刀削面': 'daoxiao hand cut noodles',
+  '烩面': 'hui mian stewed noodles',
+  '拽面': 'zhuai mian',
+  '板面': 'ban mian',
+  '手擀面': 'handmade noodles',
+  '意面': 'pasta',
+  '通心粉': 'macaroni',
+  '螺旋粉': 'fusilli',
+  '宽粉': 'wide flat noodles',
+  '粉丝': 'vermicelli cellophane noodles',
+  '粉条': 'starch noodles',
+  '年糕': 'rice cake',
+  '糯米': 'glutinous rice',
+  '糯米粉': 'glutinous rice flour',
+  '汤圆': 'tangyuan glutinous rice ball',
+  '月饼': 'mooncake',
+  '青团': 'qingtuan green rice cake',
+  '艾窝窝': 'aiwowo sweet rice cake',
+  '驴打滚': 'ludagun glutinous rice roll',
+  '豌豆黄': 'pea cake',
+  '红豆沙': 'red bean paste',
+  '绿豆糕': 'mung bean cake',
+  '龟苓膏': 'guilinggao herbal jelly',
+  '凉粉': 'liangfen凉粉',
+  '仙草': 'grass jelly',
+  '烧仙草': 'herbal tea jelly',
+  '芋圆': 'taro ball',
+  '珍珠粉圆': 'tapioca pearl',
+  '椰果': 'coconut jelly',
+  '西米': 'sago',
+  '露露': '杏仁露 almond milk',
+  '王老吉': 'wanglaoji herbal tea',
+  '加多宝': 'jiaduobao herbal tea',
+  '凉茶': 'liangcha herbal tea',
+  '酸梅汤': 'sour plum drink',
+  '姜茶': 'ginger tea',
+  '红糖姜茶': 'brown sugar ginger tea',
+  '柠檬水': 'lemonade',
+  '蜂蜜水': 'honey water',
+  '盐水': 'salt water',
+  '糖水': 'sweet soup',
+  '龟苓膏': 'guilinggao jelly',
+  '雪莲子': 'snow lotus seed',
+  '桃胶': 'peach gum',
+  '皂角米': 'soapberry seed',
+  '银耳': 'white fungus tremella',
+  '木耳': 'black fungus mushroom',
+  '香菇': 'shiitake mushroom',
+  '蘑菇': 'mushroom',
+  '金针菇': 'enoki mushroom',
+  '杏鲍菇': 'king oyster mushroom',
+  '平菇': 'oyster mushroom',
+  '草菇': 'straw mushroom',
+  '茶树菇': 'tea tree mushroom',
+  '鸡腿菇': 'shaggy ink cap mushroom',
+  '蟹味菇': 'crab mushroom',
+  '白玉菇': 'white shimeji',
+  '海鲜菇': 'seafood mushroom',
+  '榆黄菇': 'golden oyster mushroom',
+  '猴头菇': 'hericium lion mane mushroom',
+  '竹荪': 'bamboo fungus',
+  '虫草花': 'cordyceps flower',
+  '鸡枞': 'termite mushroom',
+  '松茸': 'matsutake mushroom',
+  '牛肝菌': 'porcini mushroom',
+  '青头菌': 'green head mushroom',
+  '见手青': 'blue bruise mushroom',
+  '鸡油菌': 'chanterelle mushroom',
+  '老人头': 'Lao Ren Tou mushroom',
+  '禾麻菇': 'He Ma Gu mushroom',
+  '黑松露': 'black truffle',
+  '白松露': 'white truffle',
+}
+
+// DeepSeek API Key
+const DEEPSEEK_API_KEY = 'sk-fee11b21be754ff49ee1f19e5422376e'
+const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions'
+
+// 直接询问 DeepSeek 获取食物热量
 export async function searchOnlineFoods(keyword) {
   if (!keyword || keyword.trim() === '') {
     return []
   }
 
-  const encodedKeyword = encodeURIComponent(keyword.trim())
-  const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodedKeyword}&search_simple=1&action=process&json=1&page_size=20&fields=product_name,brands,nutriments`
-
   try {
-    const response = await fetch(url, {
+    const response = await fetch(DEEPSEEK_API_URL, {
+      method: 'POST',
       headers: {
-        'User-Agent': 'CalorieTracker/1.0 (Vue.js App)'
-      }
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: `你是一个食物营养数据库。请根据用户输入的食物名称，返回该食物的营养信息。
+
+请严格按以下 JSON 格式返回（只返回 JSON，不要任何其他文字）：
+{
+  "name": "食物名称",
+  "calories": 每100克的热量(数字，单位kcal),
+  "protein": 每100克的蛋白质(数字，单位g),
+  "fat": 每100克的脂肪(数字，单位g),
+  "carbs": 每100克的碳水化合物(数字，单位g)
+}
+
+如果不知道该食物，返回空数组 []` },
+          { role: 'user', content: `查找 "${keyword}" 的营养信息，每100克的热量、蛋白质、脂肪、碳水化合物` }
+        ],
+        max_tokens: 200,
+        temperature: 0.1
+      })
     })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error: ${response.status}`)
-    }
-
     const data = await response.json()
-
-    if (!data.products || data.products.length === 0) {
-      return []
-    }
-
-    // 转换 API 数据格式
-    const results = data.products
-      .filter(product => product.product_name && product.nutriments)
-      .map((product, index) => {
-        const nutriments = product.nutriments
-        return {
-          id: `online_${Date.now()}_${index}`,
-          name: product.product_name,
-          nameEn: product.brands || '',
-          calories: Math.round(nutriments['energy-kcal_100g'] || 0),
-          protein: parseFloat((nutriments.proteins_100g || 0).toFixed(1)),
-          fat: parseFloat((nutriments.fat_100g || 0).toFixed(1)),
-          carbs: parseFloat((nutriments.carbohydrates_100g || 0).toFixed(1)),
-          isOnline: true // 标记为联网搜索结果
+    if (data.choices && data.choices[0]?.message?.content) {
+      const content = data.choices[0].message.content.trim()
+      // 尝试解析 JSON
+      try {
+        // 提取 JSON（可能有 markdown 包裹）
+        let jsonStr = content
+        if (content.includes('```json')) {
+          jsonStr = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+        } else if (content.includes('```')) {
+          jsonStr = content.replace(/```\n?/g, '').trim()
         }
-      })
-      .filter(food => food.calories > 0) // 过滤掉没有热量的结果
-
-    return results
+        const result = JSON.parse(jsonStr)
+        // 统一为数组处理
+        const resultArray = Array.isArray(result) ? result : [result]
+        if (resultArray.length > 0 && resultArray[0].name) {
+          return resultArray.map((item, index) => ({
+            id: `deepseek_${Date.now()}_${index}`,
+            name: item.name || keyword,
+            calories: Math.round(item.calories || 0),
+            protein: parseFloat((item.protein || 0).toFixed(1)),
+            fat: parseFloat((item.fat || 0).toFixed(1)),
+            carbs: parseFloat((item.carbs || 0).toFixed(1)),
+            isOnline: true
+          })).filter(f => f.calories > 0)
+        }
+      } catch (parseError) {
+        console.error('解析 DeepSeek 返回失败:', parseError, content)
+      }
+    }
   } catch (error) {
-    console.error('联网搜索失败:', error)
-    return []
+    console.error('DeepSeek 查询失败:', error)
   }
+  return []
 }
