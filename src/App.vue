@@ -14,8 +14,18 @@ const showToast = (msg, type = 'success') => {
   setTimeout(() => toast.remove(), 3000)
 }
 
-// 当前日期
+// 当前日期 (字符串格式用于存储)
 const currentDate = ref(new Date().toISOString().split('T')[0])
+
+// 日期选择器引用
+const dateInputRef = ref(null)
+
+// 打开日期选择器
+const openDatePicker = () => {
+  if (dateInputRef.value) {
+    dateInputRef.value.showPicker()
+  }
+}
 
 // 格式化日期显示
 const formattedDate = computed(() => {
@@ -145,11 +155,19 @@ const isToday = computed(() => {
           </svg>
         </button>
 
-        <button class="date-display" @click="goToToday">
+        <button class="date-display" @click="openDatePicker">
           <Calendar :size="18" />
           <span>{{ formattedDate }}</span>
           <span class="date-weekday">{{ new Date(currentDate).toLocaleDateString('zh-CN', { weekday: 'short' }) }}</span>
         </button>
+
+        <!-- 隐藏的日期输入，触发浏览器日历 -->
+        <input
+          ref="dateInputRef"
+          type="date"
+          v-model="currentDate"
+          class="native-date-input"
+        />
 
         <button class="nav-btn" @click="nextDay" :disabled="isToday">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -164,15 +182,6 @@ const isToday = computed(() => {
       <div class="main-grid">
         <!-- 左侧：搜索和记录 -->
         <div class="left-column">
-          <!-- 日期选择器 -->
-          <div class="date-picker-card glass-card">
-            <input
-              type="date"
-              v-model="currentDate"
-              class="date-input"
-            />
-          </div>
-
           <!-- 搜索卡片 -->
           <div class="search-card glass-card">
             <FoodSearch
@@ -217,11 +226,19 @@ const isToday = computed(() => {
 
 .app-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
   padding: 16px 24px;
   margin: 20px 24px 0;
   border-radius: var(--radius-lg);
+  position: relative;
+}
+
+.header-left {
+  position: absolute;
+  left: 24px;
+  display: flex;
+  align-items: center;
 }
 
 .header-left {
@@ -283,17 +300,26 @@ const isToday = computed(() => {
   gap: 10px;
   padding: 10px 20px;
   background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   color: var(--text-primary);
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .date-display:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 217, 255, 0.2);
+}
+
+.date-display:active {
+  transform: translateY(0) scale(0.98);
 }
 
 .date-weekday {
@@ -332,31 +358,123 @@ const isToday = computed(() => {
   top: 24px;
 }
 
-.date-picker-card {
-  padding: 16px 20px;
-  display: flex;
-  justify-content: center;
+.date-picker-trigger {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+  overflow: hidden;
 }
 
-.date-input {
-  background: transparent;
+.native-date-input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
   border: none;
-  color: var(--text-primary);
-  font-size: 16px;
-  font-family: var(--font-display);
-  cursor: pointer;
-  padding: 8px 16px;
-  border-radius: 8px;
-  transition: background 0.2s;
+  background: transparent;
+  pointer-events: none;
+  margin-left: -1px;
 }
 
-.date-input:hover {
-  background: rgba(255, 255, 255, 0.1);
+.glass-date-picker {
+  --n-border: 1px solid var(--glass-border) !important;
+  --n-border-hover: 1px solid var(--glass-border-hover) !important;
+  --n-border-focus: 1px solid var(--accent) !important;
+  --n-box-shadow: none !important;
+  --n-box-shadow-focus: 0 0 0 2px var(--accent-glow) !important;
+  --n-color: rgba(255, 255, 255, 0.08) !important;
+  --n-color-focus: rgba(255, 255, 255, 0.12) !important;
+  --n-text-color: var(--text-primary) !important;
+  --n-text-color-focus: var(--text-primary) !important;
+  --n-caret-color: var(--accent) !important;
+  --n-placeholder-color: var(--text-muted) !important;
+  --n-height: 44px !important;
+  --n-font-size: 15px !important;
+  --n-border-radius: var(--radius-sm) !important;
+  --n-padding: 8px 16px !important;
+  --n-icon-color: var(--text-secondary) !important;
+  --n-arrow-color: var(--text-secondary) !important;
+  --n-date-entity-text-color: var(--text-primary) !important;
+  --n-date-entity-text-color-hover: var(--text-primary) !important;
+  --n-date-entity-color: var(--accent) !important;
+  --n-date-entity-color-hover: var(--accent) !important;
+  --n-calendar-title-text-color: var(--text-primary) !important;
+  --n-calendar-title-text-color-hover: var(--accent) !important;
+  --n-calendar-day-text-color: var(--text-secondary) !important;
+  --n-calendar-day-text-color-hover: var(--text-primary) !important;
+  --n-calendar-day-text-color-current: var(--text-primary) !important;
+  --n-calendar-day-color-selected: var(--accent) !important;
+  --n-calendar-day-color-hover: rgba(255, 255, 255, 0.1) !important;
+  --n-arrow-color: var(--text-secondary) !important;
+  --n-arrow-color-hover: var(--accent) !important;
+  --n-scrollbar-color: rgba(255, 255, 255, 0.2) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 
-.date-input::-webkit-calendar-picker-indicator {
-  filter: invert(1);
-  cursor: pointer;
+/* 弹出面板整体样式 */
+.glass-date-picker :deep(.n-date-picker-panel) {
+  background: rgba(30, 30, 60, 0.9) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid var(--glass-border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* 面板头部 */
+.glass-date-picker :deep(.n-date-picker-panel-header) {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-bottom: 1px solid var(--glass-border) !important;
+}
+
+/* 月份导航 */
+.glass-date-picker :deep(.n-date-picker-month) {
+  color: var(--text-primary) !important;
+}
+
+/* 箭头按钮 */
+.glass-date-picker :deep(.n-button) {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid var(--glass-border) !important;
+  color: var(--text-primary) !important;
+}
+
+.glass-date-picker :deep(.n-button:hover) {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: var(--glass-border-hover) !important;
+}
+
+/* 日历网格 */
+.glass-date-picker :deep(.n-date-picker-calendar) {
+  background: transparent !important;
+}
+
+.glass-date-picker :deep(.n-date-picker-calendar-header) {
+  color: var(--text-secondary) !important;
+}
+
+/* 日期单元格 */
+.glass-date-picker :deep(.n-date-picker-cell) {
+  color: var(--text-secondary) !important;
+}
+
+.glass-date-picker :deep(.n-date-picker-cell:hover) {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.glass-date-picker :deep(.n-date-picker-cell--selected) {
+  background: var(--accent) !important;
+  color: var(--text-primary) !important;
+}
+
+/* 底部确认区域 */
+.glass-date-picker :deep(.n-date-picker-panel-footer) {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-top: 1px solid var(--glass-border) !important;
 }
 
 .search-card {
