@@ -540,8 +540,10 @@ export async function searchOnlineFoods(keyword) {
     })
 
     const data = await response.json()
+    console.log('DeepSeek API response:', data)
     if (data.choices && data.choices[0]?.message?.content) {
       const content = data.choices[0].message.content.trim()
+      console.log('DeepSeek content:', content)
       // 尝试解析 JSON
       try {
         // 提取 JSON（可能有 markdown 包裹）
@@ -551,7 +553,9 @@ export async function searchOnlineFoods(keyword) {
         } else if (content.includes('```')) {
           jsonStr = content.replace(/```\n?/g, '').trim()
         }
+        console.log('JSON string to parse:', jsonStr)
         const result = JSON.parse(jsonStr)
+        console.log('Parsed result:', result)
         // 统一为数组处理
         const resultArray = Array.isArray(result) ? result : [result]
         if (resultArray.length > 0 && resultArray[0].name) {
