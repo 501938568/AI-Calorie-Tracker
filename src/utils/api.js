@@ -1,34 +1,8 @@
 // API 服务 - 处理与后端的通信
 
-const API_BASE = process.env.VUE_APP_API_URL || 'http://150.158.103.199:3000/api'
+import { getToken, saveAuth, clearAuth, getCurrentUser, isLoggedIn } from './auth-storage.js'
 
-// 获取存储的token
-function getToken() {
-  return localStorage.getItem('token')
-}
-
-// 保存token和用户信息
-function saveAuth(token, user) {
-  localStorage.setItem('token', token)
-  localStorage.setItem('user', JSON.stringify(user))
-}
-
-// 清除认证信息
-function clearAuth() {
-  localStorage.removeItem('token')
-  localStorage.removeItem('user')
-}
-
-// 获取当前用户
-function getCurrentUser() {
-  const userStr = localStorage.getItem('user')
-  return userStr ? JSON.parse(userStr) : null
-}
-
-// 检查是否已登录
-function isLoggedIn() {
-  return !!getToken()
-}
+const API_BASE = import.meta.env.VITE_API_URL || 'http://150.158.103.199:3000/api'
 
 // 通用请求封装
 async function request(endpoint, options = {}) {
