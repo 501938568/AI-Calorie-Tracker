@@ -47,14 +47,22 @@ function handleLogout() {
 // 检查登录状态
 onMounted(async () => {
   if (auth.isLoggedIn()) {
+    // 先用本地数据快速恢复登录状态
+    const cachedUser = auth.getCurrentUser()
+    if (cachedUser) {
+      isLoggedIn.value = true
+      currentUser.value = cachedUser
+    }
+
+    // 后台验证 token
     try {
       const data = await auth.getMe()
-      isLoggedIn.value = true
       currentUser.value = data.user
     } catch (err) {
       // token无效，清除登录状态
       auth.logout()
       isLoggedIn.value = false
+      currentUser.value = null
     }
   }
   loading.value = false

@@ -1,3 +1,10 @@
 {
-  "users": []
+  "users": [
+    {
+      "id": "2f1de428-b18b-4deb-9b1e-453ca359aa11",
+      "username": "501938568",
+      "password": "$2b$10$tVkVbq64HQrOumTw981sWObuEq6vsT/A/e3AnoydwQjpb6Gdhp2LK",
+      "createdAt": "2026-03-27T07:50:57.622Z"
+    }
+  ]
 }
