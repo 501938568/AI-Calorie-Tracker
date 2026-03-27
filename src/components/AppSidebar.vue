@@ -6,10 +6,14 @@ const props = defineProps({
   currentTool: {
     type: String,
     default: 'calorie'
+  },
+  currentUser: {
+    type: Object,
+    default: null
   }
 })
 
-const emit = defineEmits(['select-tool'])
+const emit = defineEmits(['select-tool', 'logout'])
 
 // 已激活的工具
 const activeTools = computed(() => {
@@ -81,6 +85,20 @@ const comingSoonTools = computed(() => {
     </nav>
 
     <div class="sidebar-footer">
+      <!-- 用户信息 -->
+      <div class="user-info" v-if="currentUser">
+        <div class="user-avatar">{{ currentUser.username?.charAt(0).toUpperCase() }}</div>
+        <div class="user-details">
+          <span class="user-name">{{ currentUser.username }}</span>
+        </div>
+        <button class="logout-btn" @click="emit('logout')" title="退出登录">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
+      </div>
       <div class="version-info">v1.0.0</div>
     </div>
   </aside>
@@ -219,6 +237,65 @@ const comingSoonTools = computed(() => {
 .sidebar-footer {
   padding: 16px 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-light));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.user-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.logout-btn {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 100, 100, 0.2);
+  color: #ff6464;
 }
 
 .version-info {

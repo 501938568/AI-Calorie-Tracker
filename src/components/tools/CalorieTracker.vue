@@ -4,6 +4,7 @@ import { Calendar } from 'lucide-vue-next'
 import FoodSearch from '../FoodSearch.vue'
 import CalorieStats from '../CalorieStats.vue'
 import FoodTimeline from '../FoodTimeline.vue'
+import { calorieAPI } from '../../utils/api.js'
 
 // Props: 接收外部传入的日期
 const props = defineProps({
@@ -59,64 +60,67 @@ const formattedDate = computed(() => {
   }
 })
 
-// 存储键名
-const STORAGE_KEY = 'calorie_tracker_records'
-
-// 从 localStorage 加载数据
-function loadRecords() {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY)
-    if (data) {
-      const allRecords = JSON.parse(data)
-      return allRecords[currentDate.value] || []
-    }
-  } catch (e) {
-    console.error('Failed to load records:', e)
-  }
-  return []
-}
-
-// 保存到 localStorage
-function saveRecords(records) {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY)
-    const allRecords = data ? JSON.parse(data) : {}
-    allRecords[currentDate.value] = records
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(allRecords))
-  } catch (e) {
-    console.error('Failed to save records:', e)
-  }
-}
-
 // 今日记录
 const todayRecords = ref([])
 
+// 从API加载数据
+async function loadRecordsFromAPI() {
+  try {
+    const data = await calorieAPI.getAll(currentDate.value)
+    todayRecords.value = data.records || []
+  } catch (err) {
+    console.error('加载记录失败:', err)
+    todayRecords.value = []
+  }
+}
+
 // 加载数据
 onMounted(() => {
-  todayRecords.value = loadRecords()
+  loadRecordsFromAPI()
 })
 
 // 监听日期变化
 watch(currentDate, () => {
-  todayRecords.value = loadRecords()
+  loadRecordsFromAPI()
   emit('date-change', currentDate.value)
 })
 
 // 添加食物
-function addFood(record) {
-  todayRecords.value.push(record)
-  saveRecords(todayRecords.value)
-  showToast(`已添加 ${record.foodName} (${record.calories} kcal)`)
+async function addFood(record) {
+  try {
+    const data = await calorieAPI.add({
+      foodName: record.foodName,
+      calories: record.calories,
+      protein: record.protein,
+      fat: record.fat,
+      carbs: record.carbs,
+      amount: record.amount,
+      mealType: record.mealType,
+      date: currentDate.value
+    })
+    todayRecords.value.unshift(data.record)
+    showToast(`已添加 ${record.foodName} (${record.calories} kcal)`)
+  } catch (err) {
+    console.error('添加记录失败:', err)
+    showToast('添加失败: ' + err.message, 'error')
+  }
 }
 
 // 删除记录
-function deleteRecord(recordId) {
-  const index = todayRecords.value.findIndex(r => r.id === recordId)
-  if (index > -1) {
-    const deleted = todayRecords.value[index]
-    todayRecords.value.splice(index, 1)
-    saveRecords(todayRecords.value)
-    showToast(`已删除 ${deleted.foodName}`, 'warning')
+async function deleteRecord(recordId) {
+  try {
+    const deleted = todayRecords.value.find(r => r.id === recordId)
+    await calorieAPI.delete(recordId)
+    const index = todayRecords.value.findIndex(r => r.id === recordId)
+    if (index > -1) {
+      todayRecords.value.splice(index, 1)
+    }
+    if (deleted) {
+      showToast(`已删除 ${deleted.foodName}`, 'warning')
+    }
+  } catch (err) {
+    console.error('删除记录失败:', err)
+    showToast('删除失败: ' + err.message, 'error')
   }
 }
 

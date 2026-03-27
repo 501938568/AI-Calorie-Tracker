@@ -12,6 +12,7 @@ import {
   Legend,
   Filler
 } from 'chart.js'
+import { weightAPI } from '../../utils/api.js'
 
 // 注册 Chart.js 组件
 ChartJS.register(
@@ -45,9 +46,6 @@ const showToast = (msg, type = 'success') => {
   setTimeout(() => toast.remove(), 3000)
 }
 
-// 存储键名
-const STORAGE_KEY = 'weight_tracker_records'
-
 // 当前日期时间
 const currentDate = ref(new Date().toISOString().split('T')[0])
 const currentTime = ref(new Date().toTimeString().slice(0, 5))
@@ -58,60 +56,53 @@ const weightInput = ref('')
 // 记录列表
 const records = ref([])
 
-// 加载数据
-function loadRecords() {
+// 从API加载数据
+async function loadRecordsFromAPI() {
   try {
-    const data = localStorage.getItem(STORAGE_KEY)
-    if (data) {
-      return JSON.parse(data)
-    }
-  } catch (e) {
-    console.error('Failed to load records:', e)
-  }
-  return []
-}
-
-// 保存数据
-function saveRecords(data) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
-  } catch (e) {
-    console.error('Failed to save records:', e)
+    const data = await weightAPI.getAll()
+    records.value = data.records || []
+  } catch (err) {
+    console.error('加载记录失败:', err)
+    records.value = []
   }
 }
 
 // 添加记录
-function addRecord() {
+async function addRecord() {
   const weight = parseFloat(weightInput.value)
   if (!weight || weight <= 0 || weight > 500) {
     showToast('请输入有效的体重值 (1-500kg)', 'warning')
     return
   }
 
-  const dateTime = new Date(`${currentDate.value}T${currentTime.value}`)
-  const record = {
-    id: `weight_${Date.now()}`,
-    weight: weight,
-    date: currentDate.value,
-    time: currentTime.value,
-    timestamp: dateTime.getTime()
+  try {
+    const data = await weightAPI.add({
+      weight: weight,
+      date: currentDate.value,
+      time: currentTime.value
+    })
+    records.value.unshift(data.record)
+    records.value.sort((a, b) => b.timestamp - a.timestamp)
+    weightInput.value = ''
+    showToast(`已记录 ${weight} kg`)
+  } catch (err) {
+    console.error('添加记录失败:', err)
+    showToast('添加失败: ' + err.message, 'error')
   }
-
-  records.value.push(record)
-  records.value.sort((a, b) => b.timestamp - a.timestamp)
-  saveRecords(records.value)
-
-  weightInput.value = ''
-  showToast(`已记录 ${weight} kg`)
 }
 
 // 删除记录
-function deleteRecord(recordId) {
-  const index = records.value.findIndex(r => r.id === recordId)
-  if (index > -1) {
-    records.value.splice(index, 1)
-    saveRecords(records.value)
+async function deleteRecord(recordId) {
+  try {
+    await weightAPI.delete(recordId)
+    const index = records.value.findIndex(r => r.id === recordId)
+    if (index > -1) {
+      records.value.splice(index, 1)
+    }
     showToast('已删除记录', 'warning')
+  } catch (err) {
+    console.error('删除记录失败:', err)
+    showToast('删除失败: ' + err.message, 'error')
   }
 }
 
@@ -264,7 +255,7 @@ function formatDate(dateStr) {
 
 // 初始化
 onMounted(() => {
-  records.value = loadRecords()
+  loadRecordsFromAPI()
 })
 </script>
 

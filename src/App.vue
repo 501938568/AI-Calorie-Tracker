@@ -1,9 +1,16 @@
 <script setup>
-import { ref, computed, markRaw } from 'vue'
+import { ref, computed, markRaw, onMounted } from 'vue'
 import AppSidebar from './components/AppSidebar.vue'
+import Login from './components/auth/Login.vue'
 import CalorieTracker from './components/tools/CalorieTracker.vue'
 import WeightTracker from './components/tools/WeightTracker.vue'
 import { tools, defaultTool } from './data/tools.js'
+import { auth } from './utils/api.js'
+
+// 登录状态
+const isLoggedIn = ref(false)
+const currentUser = ref(null)
+const loading = ref(true)
 
 // 当前选中的工具
 const currentTool = ref(defaultTool)
@@ -12,8 +19,6 @@ const currentTool = ref(defaultTool)
 const toolComponents = {
   calorie: markRaw(CalorieTracker),
   weight: markRaw(WeightTracker)
-  // 未来可添加更多工具映射
-  // water: markRaw(WaterTracker)
 }
 
 // 当前工具组件
@@ -25,6 +30,35 @@ const currentComponent = computed(() => {
 function selectTool(toolId) {
   currentTool.value = toolId
 }
+
+// 登录成功回调
+function handleLoginSuccess() {
+  isLoggedIn.value = true
+  currentUser.value = auth.getCurrentUser()
+}
+
+// 登出
+function handleLogout() {
+  auth.logout()
+  isLoggedIn.value = false
+  currentUser.value = null
+}
+
+// 检查登录状态
+onMounted(async () => {
+  if (auth.isLoggedIn()) {
+    try {
+      const data = await auth.getMe()
+      isLoggedIn.value = true
+      currentUser.value = data.user
+    } catch (err) {
+      // token无效，清除登录状态
+      auth.logout()
+      isLoggedIn.value = false
+    }
+  }
+  loading.value = false
+})
 </script>
 
 <template>
@@ -35,29 +69,42 @@ function selectTool(toolId) {
     <div class="orb orb-3"></div>
   </div>
 
-  <!-- 左侧导航栏 -->
-  <AppSidebar
-    :currentTool="currentTool"
-    @select-tool="selectTool"
-  />
+  <!-- 加载中 -->
+  <div v-if="loading" class="loading-container">
+    <div class="loading-spinner"></div>
+  </div>
 
-  <!-- 主内容区 -->
-  <div class="app-main-container">
-    <component
-      :is="currentComponent"
-      v-if="currentComponent"
-      class="tool-component"
+  <!-- 未登录 - 显示登录页面 -->
+  <Login v-else-if="!isLoggedIn" @login-success="handleLoginSuccess" />
+
+  <!-- 已登录 - 显示主应用 -->
+  <template v-else>
+    <!-- 左侧导航栏 -->
+    <AppSidebar
+      :currentTool="currentTool"
+      :currentUser="currentUser"
+      @select-tool="selectTool"
+      @logout="handleLogout"
     />
 
-    <!-- 即将上线提示 -->
-    <div v-else class="coming-soon-container">
-      <div class="coming-soon-card glass-card">
-        <div class="coming-soon-icon">🚧</div>
-        <h2 class="coming-soon-title">工具即将上线</h2>
-        <p class="coming-soon-desc">该功能正在开发中，敬请期待...</p>
+    <!-- 主内容区 -->
+    <div class="app-main-container">
+      <component
+        :is="currentComponent"
+        v-if="currentComponent"
+        class="tool-component"
+      />
+
+      <!-- 即将上线提示 -->
+      <div v-else class="coming-soon-container">
+        <div class="coming-soon-card glass-card">
+          <div class="coming-soon-icon">🚧</div>
+          <h2 class="coming-soon-title">工具即将上线</h2>
+          <p class="coming-soon-desc">该功能正在开发中，敬请期待...</p>
+        </div>
       </div>
     </div>
-  </div>
+  </template>
 </template>
 
 <style scoped>
@@ -104,6 +151,28 @@ function selectTool(toolId) {
   font-size: 16px;
   color: var(--text-secondary);
   margin: 0;
+}
+
+.loading-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* 响应式 */
