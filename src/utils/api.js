@@ -1,6 +1,6 @@
 // API 服务 - 处理与后端的通信
 
-const API_BASE = process.env.VUE_APP_API_URL || 'http://localhost:3000/api'
+const API_BASE = process.env.VUE_APP_API_URL || 'http://150.158.103.199:3000/api'
 
 // 获取存储的token
 function getToken() {
