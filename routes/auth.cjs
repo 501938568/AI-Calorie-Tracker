@@ -2,7 +2,7 @@ const express = require('express')
 const bcrypt = require('bcryptjs')
 const { v4: uuidv4 } = require('uuid')
 const { usersDB } = require('../data/store.cjs')
-const { generateToken } = require('../middleware/auth.cjs')
+const { createSession, setSessionCookie, clearSessionCookie } = require('../middleware/auth.cjs')
 
 const router = express.Router()
 
@@ -45,12 +45,12 @@ router.post('/register', async (req, res) => {
       return res.status(500).json({ error: '注册失败' })
     }
 
-    // 生成token
-    const token = generateToken(savedUser)
+    // 创建 session 并设置 cookie
+    const sessionId = createSession(savedUser.id)
+    setSessionCookie(res, sessionId)
 
     res.status(201).json({
       message: '注册成功',
-      token,
       user: {
         id: savedUser.id,
         username: savedUser.username
@@ -83,12 +83,12 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: '用户名或密码错误' })
     }
 
-    // 生成token
-    const token = generateToken(user)
+    // 创建 session 并设置 cookie
+    const sessionId = createSession(user.id)
+    setSessionCookie(res, sessionId)
 
     res.json({
       message: '登录成功',
-      token,
       user: {
         id: user.id,
         username: user.username
@@ -100,34 +100,20 @@ router.post('/login', async (req, res) => {
   }
 })
 
-// 获取当前用户信息
-router.get('/me', (req, res) => {
-  const authHeader = req.headers['authorization']
-  const token = authHeader && authHeader.split(' ')[1]
+// 登出
+router.post('/logout', (req, res) => {
+  const { clearSessionCookie } = require('../middleware/auth.cjs')
+  clearSessionCookie(res)
+  res.json({ message: '已退出登录' })
+})
 
-  if (!token) {
-    return res.status(401).json({ error: '未登录' })
-  }
+// 获取当前用户信息 - 需要认证
+const { authenticateToken } = require('../middleware/auth.cjs')
 
-  try {
-    const jwt = require('jsonwebtoken')
-    const { JWT_SECRET } = require('../middleware/auth')
-    const decoded = jwt.verify(token, JWT_SECRET)
-    const user = usersDB.findById(decoded.id)
-
-    if (!user) {
-      return res.status(404).json({ error: '用户不存在' })
-    }
-
-    res.json({
-      user: {
-        id: user.id,
-        username: user.username
-      }
-    })
-  } catch (error) {
-    res.status(401).json({ error: 'token无效' })
-  }
+router.get('/me', authenticateToken, (req, res) => {
+  res.json({
+    user: req.user
+  })
 })
 
 module.exports = router

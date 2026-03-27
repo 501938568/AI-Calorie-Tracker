@@ -5,6 +5,12 @@
       "username": "501938568",
       "password": "$2b$10$tVkVbq64HQrOumTw981sWObuEq6vsT/A/e3AnoydwQjpb6Gdhp2LK",
       "createdAt": "2026-03-27T07:50:57.622Z"
+    },
+    {
+      "id": "test001",
+      "username": "test",
+      "password": "$2b$10$tUp3tppmtZIKScmjxWk0LO4TeYDDXSXbAOP.bQ86pi/ozhFb3q31a",
+      "createdAt": "2026-03-27T09:00:00.000Z"
     }
   ]
 }

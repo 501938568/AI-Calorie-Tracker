@@ -20,33 +20,36 @@ function deleteCookie(name) {
   document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`
 }
 
-// 获取存储的token - 优先从 cookie 获取
-export function getToken() {
-  return getCookie('auth_token') || localStorage.getItem('token')
+// 检查是否已登录（通过 cookie）
+export function isLoggedIn() {
+  return !!getCookie('session_id')
 }
 
-// 保存token和用户信息
-export function saveAuth(token, user) {
-  // 同时保存到 cookie 和 localStorage，双重保险
-  setCookie('auth_token', token, 30)
-  localStorage.setItem('token', token)
-  localStorage.setItem('user', JSON.stringify(user))
+// 获取当前用户信息（需要调用 API）
+export async function getCurrentUser() {
+  try {
+    const res = await fetch(`${API_BASE}/auth/me`, {
+      credentials: 'include' // 重要：携带 cookie
+    })
+    if (res.ok) {
+      const data = await res.json()
+      return data.user
+    }
+  } catch (e) {}
+  return null
+}
+
+// 保存用户信息到 localStorage（用于快速显示）
+export function saveUser(user) {
+  try {
+    localStorage.setItem('user', JSON.stringify(user))
+  } catch (e) {}
 }
 
 // 清除认证信息
 export function clearAuth() {
-  deleteCookie('auth_token')
-  localStorage.removeItem('token')
-  localStorage.removeItem('user')
-}
-
-// 获取当前用户
-export function getCurrentUser() {
-  const userStr = localStorage.getItem('user')
-  return userStr ? JSON.parse(userStr) : null
-}
-
-// 检查是否已登录
-export function isLoggedIn() {
-  return !!getToken()
+  deleteCookie('session_id')
+  try {
+    localStorage.removeItem('user')
+  } catch (e) {}
 }

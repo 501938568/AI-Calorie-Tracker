@@ -32,9 +32,14 @@ function selectTool(toolId) {
 }
 
 // 登录成功回调
-function handleLoginSuccess() {
+async function handleLoginSuccess() {
   isLoggedIn.value = true
-  currentUser.value = auth.getCurrentUser()
+  try {
+    const data = await auth.getMe()
+    currentUser.value = data.user
+  } catch (err) {
+    console.error('获取用户信息失败:', err)
+  }
 }
 
 // 登出
@@ -47,19 +52,21 @@ function handleLogout() {
 // 检查登录状态
 onMounted(async () => {
   if (auth.isLoggedIn()) {
-    // 先用本地数据快速恢复登录状态
-    const cachedUser = auth.getCurrentUser()
-    if (cachedUser) {
-      isLoggedIn.value = true
-      currentUser.value = cachedUser
-    }
+    isLoggedIn.value = true
+    // 从 localStorage 快速恢复用户信息
+    try {
+      const userStr = localStorage.getItem('user')
+      if (userStr) {
+        currentUser.value = JSON.parse(userStr)
+      }
+    } catch (e) {}
 
-    // 后台验证 token
+    // 后台验证 cookie 有效性
     try {
       const data = await auth.getMe()
       currentUser.value = data.user
+      localStorage.setItem('user', JSON.stringify(data.user))
     } catch (err) {
-      // 只有 401（token无效）才清除登录状态，网络错误等其他问题保留登录
       if (err.type === 'UNAUTHORIZED') {
         auth.logout()
         isLoggedIn.value = false
