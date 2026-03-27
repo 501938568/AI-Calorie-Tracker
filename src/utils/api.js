@@ -52,12 +52,22 @@ async function request(endpoint, options = {}) {
 
     const data = await response.json()
 
+    // 401 表示 token 无效或过期，需要重新登录
+    if (response.status === 401) {
+      // 不在这里清除 token，由调用方处理
+      throw { type: 'UNAUTHORIZED', message: data.error || '请重新登录' }
+    }
+
     if (!response.ok) {
       throw new Error(data.error || '请求失败')
     }
 
     return data
   } catch (error) {
+    // 如果是 401 错误，重新抛出
+    if (error.type === 'UNAUTHORIZED') {
+      throw error
+    }
     console.error('API请求错误:', error)
     throw error
   }

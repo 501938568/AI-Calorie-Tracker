@@ -59,10 +59,12 @@ onMounted(async () => {
       const data = await auth.getMe()
       currentUser.value = data.user
     } catch (err) {
-      // token无效，清除登录状态
-      auth.logout()
-      isLoggedIn.value = false
-      currentUser.value = null
+      // 只有 401（token无效）才清除登录状态，网络错误等其他问题保留登录
+      if (err.type === 'UNAUTHORIZED') {
+        auth.logout()
+        isLoggedIn.value = false
+        currentUser.value = null
+      }
     }
   }
   loading.value = false
