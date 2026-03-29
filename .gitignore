@@ -5,3 +5,7 @@ dist
 *.log
 .vite
 .cache
+
+# 本地数据文件 - 不上传
+data/records.json
+data/store.cjs
