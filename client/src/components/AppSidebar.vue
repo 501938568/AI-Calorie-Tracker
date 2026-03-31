@@ -40,11 +40,19 @@ const comingSoonTools = computed(() => {
       <div class="nav-section" v-if="activeTools.length">
         <div class="nav-section-title">我的工具</div>
         <ul class="nav-list">
+          <li>
+            <button class="nav-item">
+              <span class="nav-item-content">
+                <span class="nav-item-name">123</span>
+              </span>
+            </button>
+          </li>
           <li
             v-for="tool in activeTools"
             :key="tool.id"
           >
             <button
+              v-if="tool.id !== 'weight'"
               class="nav-item"
               :class="{
                 'nav-item-active': currentTool === tool.id
@@ -57,6 +65,39 @@ const comingSoonTools = computed(() => {
                 <span class="nav-item-desc">{{ tool.description }}</span>
               </span>
             </button>
+            <!-- 体重记录 + FF14入口 -->
+            <div v-else class="nav-item-group">
+              <button
+                class="nav-item"
+                :class="{
+                  'nav-item-active': currentTool === tool.id
+                }"
+                @click="emit('select-tool', tool.id)"
+              >
+                <span class="nav-item-icon">{{ tool.icon }}</span>
+                <span class="nav-item-content">
+                  <span class="nav-item-name">{{ tool.name }}</span>
+                  <span class="nav-item-desc">{{ tool.description }}</span>
+                </span>
+              </button>
+              <a
+                href="https://xivpf.ff14.xin/"
+                target="_blank"
+                class="nav-item nav-item-external"
+                title="FF14招募查询"
+              >
+                <span class="nav-item-icon">🎮</span>
+                <span class="nav-item-content">
+                  <span class="nav-item-name">FF14招募</span>
+                  <span class="nav-item-desc">游戏招募查询</span>
+                </span>
+                <svg class="nav-item-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                  <polyline points="15 3 21 3 21 9"></polyline>
+                  <line x1="10" y1="14" x2="21" y2="3"></line>
+                </svg>
+              </a>
+            </div>
           </li>
         </ul>
       </div>
@@ -232,6 +273,45 @@ const comingSoonTools = computed(() => {
   padding: 2px 6px;
   border-radius: 4px;
   width: fit-content;
+}
+
+.nav-item-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-item-external {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+}
+
+.nav-item-external:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-left-color: #9b59b6;
+}
+
+.nav-item-external .nav-item-icon {
+  font-size: 18px;
+}
+
+.nav-item-arrow {
+  color: var(--text-muted);
+  opacity: 0.6;
+  margin-left: auto;
+}
+
+.nav-item-external:hover .nav-item-arrow {
+  opacity: 1;
+  color: #9b59b6;
 }
 
 .sidebar-footer {

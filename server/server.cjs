@@ -26,7 +26,7 @@ app.use((req, res, next) => {
 // 中间件
 app.use(cors({
   credentials: true,
-  origin: 'http://150.158.103.199', // 不带端口
+  origin: ['http://150.158.103.199', 'http://localhost'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }))
