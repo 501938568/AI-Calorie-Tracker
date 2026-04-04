@@ -1,4 +1,109 @@
 // 常见食物热量数据库 (单位: kcal/100g)
+// 典型份量参考 (克数)
+// 包子/馒头: 1个 ≈ 50-80g
+// 米饭: 1碗 ≈ 200g, 半碗 ≈ 100g
+// 面条: 1碗 ≈ 300g
+// 饺子: 1个 ≈ 20-30g
+// 烧麦: 1个 ≈ 25-30g
+
+// 中文数字映射
+const chineseNumbers = {
+  '零': 0, '一': 1, '二': 2, '三': 3, '四': 4, '五': 5,
+  '六': 6, '七': 7, '八': 8, '九': 9, '十': 10, '百': 100,
+  '两': 2, '半': 0.5, '几': 3, '若': 3, '好': 3
+}
+
+// 份量词与倍率的映射 (相对于"个"的倍数)
+const containerMultipliers = {
+  '个': 1,      // 基准
+  '碗': 6,      // 1碗 ≈ 6个
+  '盘': 10,     // 1盘 ≈ 10个  
+  '杯': 1.5,    // 1杯
+  '份': 4,      // 1份 ≈ 4个
+  '块': 1,      // 同"个"
+  '根': 1,      // 同"个"
+  '条': 1,      // 同"个"
+  '只': 1,      // 同"个"
+  '袋': 3,      // 1袋 ≈ 3个
+  '瓶': 2,      // 1瓶 ≈ 2个
+}
+
+// 食物基础份量表 (每个/块的克数)
+const basePortionUnits = {
+  // 包子馒头类
+  '馒头': 70, '包子': 70, '肉包': 80, '菜包': 60, '小笼包': 30, '烧麦': 30, '蒸饺': 25,
+  // 米饭面食类
+  '米饭': 200, '白米饭': 200, '粥': 200, '面条': 300, '挂面': 300,
+  // 饺子煎饺类
+  '饺子': 25, '水饺': 25, '煎饺': 30, '锅贴': 30,
+  // 面包类
+  '面包': 100, '吐司': 100,
+  // 禽蛋类
+  '鸡蛋': 50,
+}
+
+// 判断是否为份量词
+function isPortionWord(char) {
+  return ['个', '碗', '杯', '盘', '份', '块', '根', '条', '只', '袋', '瓶'].includes(char)
+}
+
+// 提取数字
+function extractNumber(str) {
+  // 阿拉伯数字
+  const arabic = str.match(/[\d.]+/)
+  if (arabic) return parseFloat(arabic[0])
+  
+  // 中文数字
+  for (const [cn, num] of Object.entries(chineseNumbers)) {
+    if (str.includes(cn)) return num
+  }
+  return null
+}
+
+// 提取量词单位
+function extractContainerWord(keyword) {
+  const containers = Object.keys(containerMultipliers)
+  for (const container of containers) {
+    if (keyword.includes(container)) return container
+  }
+  return '个' // 默认"个"
+}
+
+// 清理搜索关键词，只保留食物名称
+function cleanKeyword(keyword) {
+  let cleaned = keyword.trim()
+  
+  // 移除量词短语 (数字+单位)
+  cleaned = cleaned.replace(/[一二二三四五六七八九十半几若好\d.]+[个碗杯盘份块根条只袋瓶]/g, '')
+  
+  // 移除常见动词
+  cleaned = cleaned.replace(/[吃点了喝]/g, '')
+  
+  return cleaned.trim()
+}
+
+// 获取输入的份量(克数)
+function extractPortion(keyword, matchedFoodName) {
+  // 提取数字
+  let num = extractNumber(keyword)
+  if (num === null) num = 1 // 默认1份
+  
+  // 提取量词单位
+  const container = extractContainerWord(keyword)
+  const multiplier = containerMultipliers[container] || 1
+  
+  // 查找匹配的食物在份量映射中的标准克数
+  let basePortion = 100 // 默认100g
+  for (const [food, grams] of Object.entries(basePortionUnits)) {
+    if (matchedFoodName.includes(food) || food.includes(matchedFoodName)) {
+      basePortion = grams
+      break
+    }
+  }
+  
+  return Math.round(basePortion * num)
+}
+
 export const foodDatabase = [
   // ===== 主食类 =====
   { id: 'rice', name: '米饭', calories: 116, protein: 2.6, fat: 0.3, carbs: 25.9 },
@@ -8,6 +113,7 @@ export const foodDatabase = [
   { id: 'bread_white', name: '白面包', calories: 265, protein: 8.0, fat: 3.2, carbs: 48.6 },
   { id: 'bread_whole', name: '全麦面包', calories: 247, protein: 13.4, fat: 4.2, carbs: 41.3 },
   { id: 'steamed_bun', name: '馒头', calories: 223, protein: 7.0, fat: 1.1, carbs: 45.7 },
+  { id: 'shaomai', name: '烧麦', calories: 237, protein: 8.4, fat: 8.8, carbs: 34.5 },
   { id: 'dumpling', name: '饺子', calories: 242, protein: 9.5, fat: 8.0, carbs: 35.4 },
   { id: 'ramen', name: '方便面', calories: 473, protein: 9.5, fat: 21.1, carbs: 61.6 },
   { id: 'oatmeal', name: '燕麦片', calories: 389, protein: 16.9, fat: 6.9, carbs: 66.3 },
@@ -24,6 +130,9 @@ export const foodDatabase = [
   { id: 'pork_lean', name: '猪瘦肉', calories: 143, protein: 27.0, fat: 3.0, carbs: 0 },
   { id: 'pork_belly', name: '五花肉', calories: 395, protein: 14.0, fat: 37.0, carbs: 0 },
   { id: 'pork_chop', name: '猪排', calories: 264, protein: 28.0, fat: 16.0, carbs: 0 },
+  { id: 'sausage', name: '香肠', calories: 250, protein: 12.0, fat: 20.0, carbs: 2.0 },
+  { id: 'bacon', name: '培根', calories: 350, protein: 15.0, fat: 30.0, carbs: 1.0 },
+  { id: 'ham', name: '火腿', calories: 200, protein: 18.0, fat: 10.0, carbs: 2.0 },
   { id: 'lamb', name: '羊肉', calories: 143, protein: 25.0, fat: 4.0, carbs: 0 },
   { id: 'duck', name: '鸭肉', calories: 240, protein: 19.0, fat: 17.0, carbs: 0 },
   { id: 'duck_fillet', name: '鸭胸肉', calories: 90, protein: 18.0, fat: 1.5, carbs: 0 },
@@ -169,15 +278,128 @@ export const foodDatabase = [
 ]
 
 // 根据关键词搜索食物
+// 模糊匹配 - 计算两个字符串的相似度
+function fuzzyMatch(str1, str2, threshold = 0.4) {
+  const s1 = str1.toLowerCase()
+  const s2 = str2.toLowerCase()
+  
+  // 完全包含直接返回
+  if (s1.includes(s2) || s2.includes(s1)) return true
+  
+  // 拼音首字母匹配
+  const pinyinInitials1 = getPinyinInitials(s1)
+  const pinyinInitials2 = getPinyinInitials(s2)
+  if (pinyinInitials1 && pinyinInitials2) {
+    if (pinyinInitials1.includes(pinyinInitials2) || pinyinInitials2.includes(pinyinInitials1)) return true
+  }
+  
+  // 编辑距离匹配
+  const distance = levenshteinDistance(s1, s2)
+  const maxLen = Math.max(s1.length, s2.length)
+  const similarity = 1 - distance / maxLen
+  
+  return similarity >= threshold
+}
+
+// 简单的中文拼音首字母（常见食物）
+const pinyinMap = {
+  '米饭': 'mf', '白米饭': 'bfm', '面条': 'mt', '挂面': 'gm',
+  '方便面': 'fbm', '面包': 'mb', '馒头': 'mt', '包子': 'bz',
+  '饺子': 'jz', '水饺': 'sj', '烧麦': 'sm', '粥': 'z',
+  '豆腐': 'df', '豆浆': 'dj', '牛奶': 'nn', '酸奶': 'sn',
+  '鸡蛋': 'jd', '鸡胸肉': 'jxr', '鸡翅': 'jc', '鸡腿': 'jt',
+  '猪肉': 'zr', '牛肉': 'nr', '羊肉': 'yr', '鸭肉': 'yr',
+  '虾': 'x', '鱼': 'y', '三文鱼': 'smy', '土豆': 'td',
+  '红薯': 'hs', '玉米': 'ym', '南瓜': 'ng',
+  '苹果': 'pg', '香蕉': 'xj', '橙子': 'cz', '葡萄': 'pt',
+  '西瓜': 'xg', '草莓': 'cm', '酸奶': 'sn', '米饭': 'mf',
+  '红烧肉': 'hsr', '糖醋里脊': 'tclj', '宫保鸡丁': 'gbjd',
+  '蛋炒饭': 'dcf', '蛋花汤': 'dht', '紫菜汤': 'zct',
+  '薯条': 'st', '薯片': 'sp', '汉堡': 'hg', '披萨': 'ps',
+  '火锅': 'hg', '烧烤': 'ss', '烤肉': 'kr', '炸鸡': 'zj',
+}
+
+function getPinyinInitials(str) {
+  for (const [key, value] of Object.entries(pinyinMap)) {
+    if (str.includes(key) || key.includes(str)) return value
+  }
+  return null
+}
+
+// 编辑距离算法
+function levenshteinDistance(str1, str2) {
+  const m = str1.length
+  const n = str2.length
+  const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0))
+  
+  for (let i = 0; i <= m; i++) dp[i][0] = i
+  for (let j = 0; j <= n; j++) dp[0][j] = j
+  
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (str1[i-1] === str2[j-1]) {
+        dp[i][j] = dp[i-1][j-1]
+      } else {
+        dp[i][j] = Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]) + 1
+      }
+    }
+  }
+  return dp[m][n]
+}
+
+// 模糊搜索食物
 export function searchFoods(keyword) {
   if (!keyword || keyword.trim() === '') {
     return []
   }
-  const lower = keyword.toLowerCase().trim()
-  return foodDatabase.filter(food =>
+  
+  // 清理关键词，只保留食物名称
+  const cleanedKeyword = cleanKeyword(keyword)
+  if (!cleanedKeyword) {
+    return []
+  }
+  
+  const lower = cleanedKeyword.toLowerCase()
+  
+  // 第一轮：精确匹配（包含匹配）
+  let results = foodDatabase.filter(food =>
     food.name.toLowerCase().includes(lower) ||
     (food.nameEn && food.nameEn.toLowerCase().includes(lower))
   )
+  
+  // 如果精确匹配没找到，且搜索词至少2个字符，进行模糊匹配
+  if (results.length === 0 && cleanedKeyword.length >= 2) {
+    results = foodDatabase.filter(food =>
+      fuzzyMatch(cleanedKeyword, food.name) ||
+      (food.nameEn && fuzzyMatch(cleanedKeyword, food.nameEn))
+    )
+    
+    // 排序：优先完全匹配的在前
+    results.sort((a, b) => {
+      const aExact = a.name.toLowerCase().includes(lower) ? 0 : 1
+      const bExact = b.name.toLowerCase().includes(lower) ? 0 : 1
+      return aExact - bExact
+    })
+  }
+  
+  return results.slice(0, 10)
+}
+
+// 从搜索关键词中提取份量信息
+export function extractPortionFromKeyword(keyword) {
+  const cleanedKeyword = cleanKeyword(keyword)
+  
+  // 如果清理后没有食物名称，返回默认
+  if (!cleanedKeyword) return { portion: 100, foodName: keyword }
+  
+  // 找到匹配的食物
+  const matchedFood = searchFoods(keyword)[0]
+  const foodName = matchedFood ? matchedFood.name : cleanedKeyword
+  
+  // 计算份量
+  const portion = extractPortion(keyword, foodName)
+  
+  return { portion, foodName }
 }
 
 // 根据ID获取食物
@@ -504,11 +726,61 @@ const chineseToEnglish = {
 const DEEPSEEK_API_KEY = 'sk-fee11b21be754ff49ee1f19e5422376e'
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions'
 
-// 直接询问 DeepSeek 获取食物热量
+// 提取量词信息
+function parseQuantityAndFood(keyword) {
+  // 数字正则
+  const numberRegex = /([一二二三三四五六七八九十百半几\d.]+|[0-9.]+)/
+  // 量词正则
+  const containerRegex = /([个碗杯盘份块根条只袋瓶]+)/
+  
+  let quantity = 1
+  let container = '个'
+  let foodName = keyword.trim()
+  
+  // 提取数字
+  const numMatch = keyword.match(numberRegex)
+  if (numMatch) {
+    const numStr = numMatch[1]
+    if ('零一二三四五六七八九十百'.includes(numStr[0])) {
+      // 中文数字转换
+      const chineseNums = { '零': 0, '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10, '半': 0.5, '几': 3 }
+      quantity = chineseNums[numStr] || parseFloat(numStr) || 1
+    } else {
+      quantity = parseFloat(numStr) || 1
+    }
+    // 移除数字部分
+    foodName = foodName.replace(numMatch[0], '')
+  }
+  
+  // 提取量词
+  const containerMatch = keyword.match(containerRegex)
+  if (containerMatch) {
+    container = containerMatch[1]
+    foodName = foodName.replace(containerMatch[0], '')
+  }
+  
+  // 清理食物名称
+  foodName = foodName.replace(/[吃了喝点的]/g, '').trim()
+  
+  return { quantity, container, foodName }
+}
+
+// 联网搜索食物（支持智能份量）
 export async function searchOnlineFoods(keyword) {
   if (!keyword || keyword.trim() === '') {
     return []
   }
+
+  // 解析输入中的份量信息
+  const { quantity, container, foodName } = parseQuantityAndFood(keyword)
+  
+  // 容器到克数的映射
+  const containerToGrams = {
+    '个': 50, '块': 50, '根': 50, '条': 50, '只': 50, // 默认为单个的基准克数
+    '碗': 300, '杯': 250, '盘': 350, '份': 200, '袋': 150, '瓶': 350
+  }
+  const gramsPerUnit = containerToGrams[container] || 100
+  const totalGrams = Math.round(quantity * gramsPerUnit)
 
   try {
     const response = await fetch(DEEPSEEK_API_URL, {
@@ -520,67 +792,68 @@ export async function searchOnlineFoods(keyword) {
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: [
-          { role: 'system', content: `你是一个食物营养数据库。请根据用户输入的食物名称，返回该食物的营养信息。
+          { role: 'system', content: `你是一个精准的食物营养计算助手。用户会输入"数量+容器+食物名"，如"一碗饺子"、"两个包子"、"半碗米饭"。
 
-请严格按以下 JSON 格式返回（只返回 JSON，不要任何其他文字）：
+你的任务是根据容器和数量估算实际克数，然后计算该份量的总热量。
+
+请严格按以下JSON格式返回（只返回JSON，不要任何其他文字）：
 {
   "name": "食物名称",
-  "calories": 每100克的热量(数字，单位kcal),
-  "protein": 每100克的蛋白质(数字，单位g),
-  "fat": 每100克的脂肪(数字，单位g),
-  "carbs": 每100克的碳水化合物(数字，单位g)
+  "grams": 实际估算的克数(数字),
+  "calories": 该份量的总热量(数字，单位kcal),
+  "protein": 该份量的蛋白质(数字，单位g),
+  "fat": 该份量的脂肪(数字，单位g),
+  "carbs": 该份量的碳水化合物(数字，单位g),
+  "per100grams": {
+    "calories": 每100克的热量(数字),
+    "protein": 每100克的蛋白质(数字),
+    "fat": 每100克的脂肪(数字),
+    "carbs": 每100克的碳水化合物(数字)
+  }
 }
 
-重要：无论什么食物，绝对不要返回空数组 []！如果不知道确切数值，必须根据食物类型估算一个合理的热量值。中式菜肴如辣椒炒肉约 150-200kcal/100g，宫保鸡丁约 180kcal/100g。必须返回一个对象，绝对不要返回空数组。` },
-          { role: 'user', content: `查找 "${keyword}" 的营养信息，每100克的热量、蛋白质、脂肪、碳水化合物` }
+注意：
+- grams应该是你估算的实际克数，如"一碗饺子"约10个约250克，"两个包子"约140克
+- calories应该是这份食物的总热量，不是每100克的热量
+- 重要：绝对不要返回空数组[]，必须返回一个有效的JSON对象` },
+          { role: 'user', content: `计算"${quantity}${container}${foodName}"的总热量和营养成分` }
         ],
-        max_tokens: 200,
+        max_tokens: 300,
         temperature: 0.1
       })
     })
 
     const data = await response.json()
     console.log('DeepSeek API response:', data)
+    
     if (data.choices && data.choices[0]?.message?.content) {
       const content = data.choices[0].message.content.trim()
       console.log('DeepSeek content:', content)
-      // 尝试解析 JSON
+      
       try {
-        // 提取 JSON（可能有 markdown 包裹）
+        // 提取 JSON
         let jsonStr = content
         if (content.includes('```json')) {
           jsonStr = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
         } else if (content.includes('```')) {
           jsonStr = content.replace(/```\n?/g, '').trim()
         }
-        console.log('JSON string to parse:', jsonStr)
+        
         const result = JSON.parse(jsonStr)
         console.log('Parsed result:', result)
-        // 统一为数组处理
-        const resultArray = Array.isArray(result) ? result : [result]
-        if (resultArray.length > 0 && resultArray[0].name) {
-          return resultArray.map((item, index) => ({
-            id: `deepseek_${Date.now()}_${index}`,
-            name: item.name || keyword,
-            calories: Math.round(item.calories || 0),
-            protein: parseFloat((item.protein || 0).toFixed(1)),
-            fat: parseFloat((item.fat || 0).toFixed(1)),
-            carbs: parseFloat((item.carbs || 0).toFixed(1)),
-            isOnline: true
-          })).filter(f => f.calories > 0)
-        }
-        // API 返回空数组或无效数据，根据关键词估算
-        if (content === '[]' || !resultArray.length) {
-          console.log('API 返回空数组，使用估算值')
+        
+        if (result && result.name) {
           return [{
             id: `deepseek_${Date.now()}`,
-            name: keyword,
-            calories: 180, // 默认估算值
-            protein: 10,
-            fat: 8,
-            carbs: 15,
+            name: result.name || foodName,
+            grams: result.grams || totalGrams,
+            calories: Math.round(result.calories || 0),
+            protein: parseFloat((result.protein || 0).toFixed(1)),
+            fat: parseFloat((result.fat || 0).toFixed(1)),
+            carbs: parseFloat((result.carbs || 0).toFixed(1)),
+            per100grams: result.per100grams || { calories: 0, protein: 0, fat: 0, carbs: 0 },
             isOnline: true
-          }]
+          }].filter(f => f.calories > 0)
         }
       } catch (parseError) {
         console.error('解析 DeepSeek 返回失败:', parseError, content)
@@ -589,5 +862,16 @@ export async function searchOnlineFoods(keyword) {
   } catch (error) {
     console.error('DeepSeek 查询失败:', error)
   }
-  return []
+  
+  // 兜底：返回基于本地份量估算的结果
+  return [{
+    id: `local_${Date.now()}`,
+    name: foodName,
+    grams: totalGrams,
+    calories: Math.round(totalGrams * 1.5), // 默认按150kcal/100g估算
+    protein: Math.round(totalGrams * 0.1 * 10) / 10,
+    fat: Math.round(totalGrams * 0.05 * 10) / 10,
+    carbs: Math.round(totalGrams * 0.2 * 10) / 10,
+    isOnline: false
+  }]
 }

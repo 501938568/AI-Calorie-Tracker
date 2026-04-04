@@ -9,7 +9,7 @@ export default defineConfig({
     port: 80,
   },
   optimizeDeps: {
-    include: ['naive-ui', 'vue', 'vue-router', 'chart.js', 'vue-chartjs']
+    include: ['vue', 'vue-router', 'chart.js', 'vue-chartjs']
   },
   build: {
     rollupOptions: {
@@ -17,6 +17,7 @@ export default defineConfig({
         manualChunks: (id) => {
           if (id.includes('naive-ui')) return 'naive-ui'
           if (id.includes('chart.js') || id.includes('vue-chartjs')) return 'chart'
+          if (id.includes('lucide')) return 'icons'
         }
       }
     }

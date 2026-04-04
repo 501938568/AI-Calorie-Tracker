@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { Search, Plus, Utensils, X, Loader2 } from 'lucide-vue-next'
-import { searchFoods, searchOnlineFoods } from '../data/foods.js'
+import { searchFoods, searchOnlineFoods, extractPortionFromKeyword } from '../data/foods.js'
 
 const props = defineProps({
   mealType: {
@@ -33,12 +33,17 @@ watch(searchKeyword, (val) => {
     searchResults.value = []
     showResults.value = false
     isOnlineSearch.value = false
+    selectedAmount.value = 100
     return
   }
 
   isSearching.value = true
 
   searchTimeout = setTimeout(() => {
+    // 提取份量信息
+    const { portion, foodName } = extractPortionFromKeyword(val)
+    selectedAmount.value = portion
+    
     const localResults = searchFoods(val)
     searchResults.value = localResults
 
@@ -58,15 +63,41 @@ watch(searchKeyword, (val) => {
 
 // 选中食物
 function selectFood(food) {
+  // 区分本地食物（calories是每100g）和联网返回（calories是总量）
+  let totalCalories, totalProtein, totalFat, totalCarbs, amount
+  
+  if (food.isOnline && food.per100grams) {
+    // 联网返回的食物：calories已经是总量
+    totalCalories = food.calories
+    totalProtein = food.protein
+    totalFat = food.fat
+    totalCarbs = food.carbs
+    amount = food.grams || selectedAmount.value
+  } else if (food.grams && !food.per100grams) {
+    // 本地食物但指定了克数
+    totalCalories = Math.round((food.calories * food.grams) / 100)
+    totalProtein = Math.round((food.protein * food.grams) / 100 * 10) / 10
+    totalFat = Math.round((food.fat * food.grams) / 100 * 10) / 10
+    totalCarbs = Math.round((food.carbs * food.grams) / 100 * 10) / 10
+    amount = food.grams
+  } else {
+    // 传统本地食物（按selectedAmount计算）
+    totalCalories = Math.round((food.calories * selectedAmount.value) / 100)
+    totalProtein = Math.round((food.protein * selectedAmount.value) / 100 * 10) / 10
+    totalFat = Math.round((food.fat * selectedAmount.value) / 100 * 10) / 10
+    totalCarbs = Math.round((food.carbs * selectedAmount.value) / 100 * 10) / 10
+    amount = selectedAmount.value
+  }
+  
   const record = {
     id: `${food.id}_${Date.now()}`,
     foodId: food.id,
     foodName: food.name,
-    calories: Math.round((food.calories * selectedAmount.value) / 100),
-    protein: Math.round((food.protein * selectedAmount.value) / 100 * 10) / 10,
-    fat: Math.round((food.fat * selectedAmount.value) / 100 * 10) / 10,
-    carbs: Math.round((food.carbs * selectedAmount.value) / 100 * 10) / 10,
-    amount: selectedAmount.value,
+    calories: totalCalories,
+    protein: totalProtein,
+    fat: totalFat,
+    carbs: totalCarbs,
+    amount: amount,
     mealType: props.mealType,
     timestamp: Date.now()
   }
@@ -82,6 +113,7 @@ function clearSearch() {
   showResults.value = false
   selectedAmount.value = 100
   isOnlineSearch.value = false
+  onlineSearchResults.value = []
 }
 
 // 预设分量
@@ -110,6 +142,13 @@ async function performOnlineSearch() {
     isOnlineSearching.value = false
   }
 }
+
+// 回车键触发联网搜索
+function handleEnter() {
+  if (isOnlineSearch.value && !isSearching.value) {
+    performOnlineSearch()
+  }
+}
 </script>
 
 <template>
@@ -126,20 +165,33 @@ async function performOnlineSearch() {
         v-model="searchKeyword"
         type="text"
         class="glass-input search-input"
-        placeholder="搜索食物名称..."
+        placeholder="如: 一个包子、半碗米饭、烧麦..."
+        @keydown.enter="handleEnter"
       />
       <button
-        v-if="searchKeyword"
+        v-if="searchKeyword && !isOnlineSearch"
         class="clear-btn"
         @click="clearSearch"
       >
         <X :size="16" />
+      </button>
+      <button
+        v-if="isOnlineSearch && !isSearching"
+        class="search-btn"
+        @click="performOnlineSearch"
+      >
+        <Search :size="16" />
       </button>
       <Loader2 v-if="isSearching" :size="18" class="loading-icon" />
     </div>
 
     <!-- 搜索结果 -->
     <div v-if="showResults" class="search-results">
+      <!-- 识别到的份量提示 -->
+      <div v-if="selectedAmount !== 100 && searchResults.length > 0" class="portion-tip">
+        💡 已识别份量: 约 {{ selectedAmount }}g
+      </div>
+      
       <!-- 本地结果 -->
       <div v-if="searchResults.length > 0" class="results-list">
         <div
@@ -149,8 +201,18 @@ async function performOnlineSearch() {
           :style="{ animationDelay: `${index * 50}ms` }"
         >
           <div class="food-info">
-            <span class="food-name">{{ food.name }}</span>
-            <span class="food-cal">{{ food.calories }} kcal/100g</span>
+            <span class="food-name">
+              {{ food.name }}
+              <span v-if="food.isOnline && food.grams" class="food-portion">（{{ food.grams }}g）</span>
+            </span>
+            <span class="food-cal">
+              <template v-if="food.isOnline && food.per100grams">
+                {{ food.calories }} kcal（≈{{ food.per100grams.calories }}/100g）
+              </template>
+              <template v-else>
+                {{ food.calories }} kcal/100g
+              </template>
+            </span>
           </div>
           <button
             class="add-btn"
@@ -159,6 +221,15 @@ async function performOnlineSearch() {
             <Plus :size="18" />
           </button>
         </div>
+        
+        <!-- 没找到目标？联网搜索 -->
+        <button
+          class="online-fallback-btn"
+          @click="performOnlineSearch"
+        >
+          <Search :size="14" />
+          <span>没找到？联网搜索 "{{ searchKeyword }}"</span>
+        </button>
       </div>
 
       <!-- 未命中，提示联网 -->
@@ -268,6 +339,27 @@ async function performOnlineSearch() {
   background: rgba(255, 255, 255, 0.1);
 }
 
+.search-btn {
+  position: absolute;
+  right: 14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #00b4d8);
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.search-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 10px var(--accent-glow);
+}
+
 .loading-icon {
   position: absolute;
   right: 14px;
@@ -284,6 +376,16 @@ async function performOnlineSearch() {
   max-height: 320px;
   overflow-y: auto;
   border-radius: var(--radius-sm);
+}
+
+.portion-tip {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--accent);
+  background: rgba(0, 217, 255, 0.1);
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+  text-align: center;
 }
 
 .results-list {
@@ -323,6 +425,12 @@ async function performOnlineSearch() {
   color: var(--text-secondary);
 }
 
+.food-portion {
+  font-size: 12px;
+  color: var(--accent);
+  margin-left: 4px;
+}
+
 .add-btn {
   width: 36px;
   height: 36px;
@@ -345,6 +453,29 @@ async function performOnlineSearch() {
 
 .add-btn:active {
   transform: scale(0.95);
+}
+
+.online-fallback-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 16px;
+  margin-top: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.online-fallback-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .online-search-hint {

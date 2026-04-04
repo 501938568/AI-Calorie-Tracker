@@ -1,11 +1,17 @@
 <script setup>
-import { ref, computed, markRaw, onMounted } from 'vue'
+import { ref, computed, markRaw, onMounted, defineAsyncComponent } from 'vue'
 import AppSidebar from './components/AppSidebar.vue'
 import Login from './components/auth/Login.vue'
-import CalorieTracker from './components/tools/CalorieTracker.vue'
-import WeightTracker from './components/tools/WeightTracker.vue'
 import { tools, defaultTool } from './data/tools.js'
 import { auth } from './utils/api.js'
+
+// 懒加载工具组件
+const CalorieTracker = defineAsyncComponent(() => 
+  import('./components/tools/CalorieTracker.vue')
+)
+const WeightTracker = defineAsyncComponent(() => 
+  import('./components/tools/WeightTracker.vue')
+)
 
 // 登录状态
 const isLoggedIn = ref(false)
