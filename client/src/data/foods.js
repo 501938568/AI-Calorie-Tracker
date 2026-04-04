@@ -726,6 +726,49 @@ const chineseToEnglish = {
 const DEEPSEEK_API_KEY = 'sk-fee11b21be754ff49ee1f19e5422376e'
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions'
 
+// 本地缓存键名
+const FOOD_CACHE_KEY = 'food_online_cache'
+
+// 从 localStorage 加载缓存的食物数据
+function loadFoodCache() {
+  try {
+    const cache = localStorage.getItem(FOOD_CACHE_KEY)
+    return cache ? JSON.parse(cache) : {}
+  } catch {
+    return {}
+  }
+}
+
+// 保存食物到本地缓存
+function saveFoodToCache(food) {
+  try {
+    const cache = loadFoodCache()
+    // 以食物名称为 key，避免重复
+    const key = food.name
+    // 保存最新的 per100g 数据（用于计算不同份量）
+    cache[key] = {
+      name: food.name,
+      calories: food.per100grams?.calories || Math.round(food.calories / food.grams * 100) || food.calories,
+      protein: food.per100grams?.protein || Math.round(food.protein / food.grams * 100 * 10) / 10 || food.protein,
+      fat: food.per100grams?.fat || Math.round(food.fat / food.grams * 100 * 10) / 10 || food.fat,
+      carbs: food.per100grams?.carbs || Math.round(food.carbs / food.grams * 100 * 10) / 10 || food.carbs,
+      cachedAt: Date.now()
+    }
+    localStorage.setItem(FOOD_CACHE_KEY, JSON.stringify(cache))
+  } catch (e) {
+    console.error('保存食物缓存失败:', e)
+  }
+}
+
+// 从缓存搜索食物
+function searchFromCache(keyword) {
+  const cache = loadFoodCache()
+  const lower = keyword.toLowerCase()
+  return Object.values(cache).filter(food => 
+    food.name.toLowerCase().includes(lower)
+  )
+}
+
 // 提取量词信息
 function parseQuantityAndFood(keyword) {
   // 数字正则
@@ -776,12 +819,37 @@ export async function searchOnlineFoods(keyword) {
   
   // 容器到克数的映射
   const containerToGrams = {
-    '个': 50, '块': 50, '根': 50, '条': 50, '只': 50, // 默认为单个的基准克数
+    '个': 50, '块': 50, '根': 50, '条': 50, '只': 50,
     '碗': 300, '杯': 250, '盘': 350, '份': 200, '袋': 150, '瓶': 350
   }
   const gramsPerUnit = containerToGrams[container] || 100
   const totalGrams = Math.round(quantity * gramsPerUnit)
 
+  // 1. 先检查本地缓存
+  const cachedFoods = searchFromCache(foodName)
+  if (cachedFoods.length > 0) {
+    // 使用缓存数据计算
+    const cached = cachedFoods[0]
+    const result = {
+      id: `cache_${Date.now()}`,
+      name: cached.name,
+      grams: totalGrams,
+      calories: Math.round(cached.calories * totalGrams / 100),
+      protein: Math.round(cached.protein * totalGrams / 100 * 10) / 10,
+      fat: Math.round(cached.fat * totalGrams / 100 * 10) / 10,
+      carbs: Math.round(cached.carbs * totalGrams / 100 * 10) / 10,
+      per100grams: {
+        calories: cached.calories,
+        protein: cached.protein,
+        fat: cached.fat,
+        carbs: cached.carbs
+      },
+      isOnline: true
+    }
+    return [result]
+  }
+
+  // 2. 缓存没有，查询 DeepSeek API
   try {
     const response = await fetch(DEEPSEEK_API_URL, {
       method: 'POST',
@@ -792,57 +860,28 @@ export async function searchOnlineFoods(keyword) {
       body: JSON.stringify({
         model: 'deepseek-chat',
         messages: [
-          { role: 'system', content: `你是一个精准的食物营养计算助手。用户会输入"数量+容器+食物名"，如"一碗饺子"、"两个包子"、"半碗米饭"。
-
-你的任务是根据容器和数量估算实际克数，然后计算该份量的总热量。
-
-请严格按以下JSON格式返回（只返回JSON，不要任何其他文字）：
-{
-  "name": "食物名称",
-  "grams": 实际估算的克数(数字),
-  "calories": 该份量的总热量(数字，单位kcal),
-  "protein": 该份量的蛋白质(数字，单位g),
-  "fat": 该份量的脂肪(数字，单位g),
-  "carbs": 该份量的碳水化合物(数字，单位g),
-  "per100grams": {
-    "calories": 每100克的热量(数字),
-    "protein": 每100克的蛋白质(数字),
-    "fat": 每100克的脂肪(数字),
-    "carbs": 每100克的碳水化合物(数字)
-  }
-}
-
-注意：
-- grams应该是你估算的实际克数，如"一碗饺子"约10个约250克，"两个包子"约140克
-- calories应该是这份食物的总热量，不是每100克的热量
-- 重要：绝对不要返回空数组[]，必须返回一个有效的JSON对象` },
-          { role: 'user', content: `计算"${quantity}${container}${foodName}"的总热量和营养成分` }
+          { role: 'system', content: '你是食物营养数据库。输入格式：数量+容器+食物名，如"一碗饺子"。返回JSON：{name,grams,calories,protein,fat,carbs,per100g:{calories,protein,fat,carbs}}。不要返回空数组。' },
+          { role: 'user', content: `${quantity}${container}${foodName}` }
         ],
-        max_tokens: 300,
+        max_tokens: 150,
         temperature: 0.1
       })
     })
 
     const data = await response.json()
-    console.log('DeepSeek API response:', data)
     
     if (data.choices && data.choices[0]?.message?.content) {
       const content = data.choices[0].message.content.trim()
-      console.log('DeepSeek content:', content)
       
       try {
         // 提取 JSON
-        let jsonStr = content
-        if (content.includes('```json')) {
-          jsonStr = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-        } else if (content.includes('```')) {
-          jsonStr = content.replace(/```\n?/g, '').trim()
-        }
-        
+        const jsonStr = content.replace(/```json\n?|```\n?/g, '').trim()
         const result = JSON.parse(jsonStr)
-        console.log('Parsed result:', result)
         
         if (result && result.name) {
+          // 3. 保存到本地缓存
+          saveFoodToCache(result)
+          
           return [{
             id: `deepseek_${Date.now()}`,
             name: result.name || foodName,
@@ -856,19 +895,19 @@ export async function searchOnlineFoods(keyword) {
           }].filter(f => f.calories > 0)
         }
       } catch (parseError) {
-        console.error('解析 DeepSeek 返回失败:', parseError, content)
+        console.error('解析失败:', parseError)
       }
     }
   } catch (error) {
     console.error('DeepSeek 查询失败:', error)
   }
   
-  // 兜底：返回基于本地份量估算的结果
+  // 兜底
   return [{
     id: `local_${Date.now()}`,
     name: foodName,
     grams: totalGrams,
-    calories: Math.round(totalGrams * 1.5), // 默认按150kcal/100g估算
+    calories: Math.round(totalGrams * 1.5),
     protein: Math.round(totalGrams * 0.1 * 10) / 10,
     fat: Math.round(totalGrams * 0.05 * 10) / 10,
     carbs: Math.round(totalGrams * 0.2 * 10) / 10,

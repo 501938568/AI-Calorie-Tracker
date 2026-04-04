@@ -181,6 +181,62 @@
       "date": "2026-03-30",
       "timestamp": 1774853964045,
       "createdAt": "2026-03-30T06:59:24.045Z"
+    },
+    {
+      "id": "cal_1775307761625_ci1vk7pvm",
+      "userId": "2f1de428-b18b-4deb-9b1e-453ca359aa11",
+      "foodName": "肉包",
+      "calories": 175,
+      "protein": 5.6,
+      "fat": 4.9,
+      "carbs": 24.5,
+      "amount": 70,
+      "mealType": "snack",
+      "date": "2026-04-04",
+      "timestamp": 1775307761627,
+      "createdAt": "2026-04-04T13:02:41.627Z"
+    },
+    {
+      "id": "cal_1775307941862_8ryvjomor",
+      "userId": "2f1de428-b18b-4deb-9b1e-453ca359aa11",
+      "foodName": "烧麦",
+      "calories": 71,
+      "protein": 2.5,
+      "fat": 2.6,
+      "carbs": 10.4,
+      "amount": 30,
+      "mealType": "snack",
+      "date": "2026-04-04",
+      "timestamp": 1775307941863,
+      "createdAt": "2026-04-04T13:05:41.863Z"
+    },
+    {
+      "id": "cal_1775309786049_rtwe8e5yb",
+      "userId": "2f1de428-b18b-4deb-9b1e-453ca359aa11",
+      "foodName": "香肠",
+      "calories": 150,
+      "protein": 7.5,
+      "fat": 12.5,
+      "carbs": 2.5,
+      "amount": 50,
+      "mealType": "snack",
+      "date": "2026-04-04",
+      "timestamp": 1775309786050,
+      "createdAt": "2026-04-04T13:36:26.050Z"
+    },
+    {
+      "id": "cal_1775309812813_qwh5pbqld",
+      "userId": "2f1de428-b18b-4deb-9b1e-453ca359aa11",
+      "foodName": "鸡蛋（整个）",
+      "calories": 72,
+      "protein": 6.5,
+      "fat": 5,
+      "carbs": 0.3,
+      "amount": 50,
+      "mealType": "snack",
+      "date": "2026-04-04",
+      "timestamp": 1775309812813,
+      "createdAt": "2026-04-04T13:36:52.813Z"
     }
   ],
   "weightRecords": [
@@ -246,6 +302,33 @@
       "time": "14:15",
       "timestamp": 1774937700000,
       "createdAt": "2026-03-31T06:15:31.543Z"
+    },
+    {
+      "id": "weight_1775045314233_su1cckl47",
+      "userId": "2f1de428-b18b-4deb-9b1e-453ca359aa11",
+      "weight": 92.5,
+      "date": "2026-04-01",
+      "time": "20:08",
+      "timestamp": 1775045280000,
+      "createdAt": "2026-04-01T12:08:34.233Z"
+    },
+    {
+      "id": "weight_1775220985427_ulyt09b33",
+      "userId": "2f1de428-b18b-4deb-9b1e-453ca359aa11",
+      "weight": 93.8,
+      "date": "2026-04-03",
+      "time": "20:54",
+      "timestamp": 1775220840000,
+      "createdAt": "2026-04-03T12:56:25.427Z"
+    },
+    {
+      "id": "weight_1775283072238_197l5wayz",
+      "userId": "2f1de428-b18b-4deb-9b1e-453ca359aa11",
+      "weight": 92.5,
+      "date": "2026-04-04",
+      "time": "14:11",
+      "timestamp": 1775283060000,
+      "createdAt": "2026-04-04T06:11:12.239Z"
     }
   ]
 }
